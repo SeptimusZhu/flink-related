@@ -1,4 +1,4 @@
-## Flink Kafka Connector Documentation
+## Documentation of Kafka Connector In Flink 
 
 > 本文的API等描述基于Apache Flink 1.1.4
 
@@ -76,16 +76,20 @@
     |        fetch.min.bytes        | server发送到consumer的最小数据，如果不满足这个数值则会等待知道满足指定大小。 |           --fetch.min.bytes 1            |
     |       fetch.max.wait.ms       | 当Kafka服务器收集到fetch.min.bytes大小的数据之前，无法及时响应fetch请求的超时时间 |         --fetch.max.wait.ms 6000         |
     |   metadata.fetch.timeout.ms   | 获取topic相关元数据超时时间，超时情况下consumer报`TimeoutException`异常 |     --metadata.fetch.timeout.ms 6000     |
-    |      total.memory.bytes       |             consumer最大缓存大小，              |                                          |
-    |                               |                                          |                                          |
-    |                               |                                          |                                          |
-    |                               |                                          |                                          |
-    |                               |                                          |                                          |
-    |                               |                                          |                                          |
+    |      total.memory.bytes       | consumer最大缓存大小，当consumer订阅了多个topic时，所有跟partition的连接共享该缓存大小 |        --total.memory.bytes 8192         |
+    |      fetch.buffer.bytes       | 一次fetch的内存大小，该配置应当大于服务器一条消息的最大长度，否则consumer可能在fetch时卡住 |        --fetch.buffer.bytes 4096         |
+    |           client.id           | 向Kafka服务器发送请求时携带的consumer相关字符串，用于定义一个ip/port之外的逻辑应用名 |      --client.id my_flink_consumer       |
+    |  socket.receive.buffer.bytes  |              socket接收缓冲区大小               |   --socket.receive.buffer.bytes 65536    |
+    |     reconnect.backoff.ms      |      consumer重连broker的时间间隔，用于防止频繁重连      |        --reconnect.backoff.ms 128        |
+    |      metrics.num.samples      |            metrics包含的sample数量            |         --metrics.num.samples 2          |
+    |   metrics.sample.window.ms    | metrics中的sample清理周期，当窗口周期到来，清除计数结果并重新开始计数 |     --metrics.sample.window.ms 6000      |
+    |       metric.reporters        | metrics reporter类列表，需要应用`MetricReporter`接口 |                                          |
+    |       key.deserializer        | key/value格式消息中key的反序列化类名，需要应用`Deserializer`接口 |        --key.deserializer classA         |
+    |      value.deserializer       | key/value格式消息中value的反序列化类名，需要应用`Deserializer`接口 |       --value.deserializer classB        |
+    |     flink.disable-metrics     |      Flink私有配置，当设为true时，关闭metrics统计      |       --flink.disable-metrics true       |
 
   ​
 
-* consumer fetch thread workflow
 
 
   ​
