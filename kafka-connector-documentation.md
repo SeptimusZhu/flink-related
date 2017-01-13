@@ -1,21 +1,23 @@
 ## Kafka Connector Documentation 
 
-> 本文的API等描述基于Apache Flink 1.1.4
+> 诸国栋 2017.1.13
+>
+> 基于Apache Flink 1.3-SNAPSHOT
 
 ## 0.8.x version
 
-#### architecture of Kafka connector
+#### architecture
 
-  ![](http://code.huawei.com/real-time-team/roadmap/raw/195afaa7e5c301e585df03f0a27d16b2a8df69a9/pictures/08kafka_connector.PNG)
+  ![](http://code.huawei.com/real-time-team/roadmap/raw/1a6e47e10f52800fa94b62a070e77ab1611c6a53/pictures/08kafka_connector.PNG)
 
 ​	Kafka消费者类`FlinkKafkaConsumer08`和Kafka生产者类`FlinkKafkaProducer08`与用户在DataStream API中自定义的算子函数类似，都实现了`Function`接口。这两个类基本上是对老版本的接口做封装，多数方法在对应的父类Base类中实现，其中consumer是source端，而producer是sink端。
 
-​	在Kafka的consumer类中创建了`Kafka08Fetcher`类，在fetcher类方法中创建`SimpleConsumerThread`线程类，该守护线程用于接收Kafka partition发来的数据，并调用`Kafka08Fetcher`的基类`AbstractFetcher`的`emitRecord`方法传递数据给`StreamSource`算子。
+​	在Kafka的consumer类中创建了`Kafka08Fetcher`类，在fetcher类方法中创建`SimpleConsumerThread`线程类，该守护线程循环调用Kafka接口`SimpleConsumer.fetch`用于接收Kafka partition发来的数据，并调用`Kafka08Fetcher`的基类`AbstractFetcher`的`emitRecord`方法传递数据给`StreamSource`算子。
 
 ​	Kafka的producer类`FlinkKafkaProducer08`的父类`FlinkKafkaProducerBase`实现了接口`SinkFunction`的`invoke`方法，当数据到来，对数据进行序列化后，调用kafka client的`send`方法，找到一个partition并发送。
 
-  
-#### flink consumer application sample
+
+#### consumer application sample
 
 ```java
   //a valid parameter sample: --topic test --bootstrap.servers localhost:9092 --zookeeper.connect localhost:2181 --group.id myGroup
@@ -91,7 +93,7 @@
 |     flink.disable-metrics     |      Flink私有配置，当设为true时，关闭metrics统计      |       --flink.disable-metrics true       |
 
 
-#### flink producer application sample
+#### producer application sample
 
 ```java
 //a valid parameter sample: --topic test --bootstrap.servers localhost:9092
@@ -152,4 +154,6 @@ FlinkKafkaProducer08(String topicId, KeyedSerializationSchema<IN> serializationS
 
 ## 0.10.x version
 
-> 暂不支持
+#### architecture
+
+![](http://code.huawei.com/real-time-team/roadmap/raw/1a6e47e10f52800fa94b62a070e77ab1611c6a53/pictures/10kafka_connector.PNG)
