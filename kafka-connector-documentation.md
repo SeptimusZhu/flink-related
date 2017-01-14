@@ -157,3 +157,7 @@ FlinkKafkaProducer08(String topicId, KeyedSerializationSchema<IN> serializationS
 #### architecture
 
 ![](http://code.huawei.com/real-time-team/roadmap/raw/1a6e47e10f52800fa94b62a070e77ab1611c6a53/pictures/10kafka_connector.PNG)
+
+由图可见，10版本的consumer和fetcher只是对09版本的一层接口适配，09版本的fetcher在实现上也跟08版本有差异，fetcher主线程`Kafka09Fetcher`创建接收线程`KafkaConsumerThread`，两者持有`Handover`这个中间类的相同实例，接收线程调用kafka client的`poll`接口从Kafka服务器接收数据，传递给`Handover`后由fetcher线程从`Handover`拿到数据后，调用`AbstractFetcher`的`emitRecord`方法传递数据给`StreamSource`算子。
+
+10版本的producer是function和operator的混合体，可以使用原有的08版本的接口，通过`DataStream.addSink`添加，也可以调用`FlinkKafkaProducer010.writeToKafkaWithTimestamps()`方法，支持将Kafka事件携带的Event Time写入Kafka（以DataStream API方式创建的producer，只实现了`invoke(IN value) `接口，在该框架下无法获取事件类，而通过后者方法创建的producer，重写`StreamSink`的`processElement(StreamRecord<IN> element) `方法，可以获取`StreamRecord`，从而获取事件携带的时间戳）。在数据处理流程上，跟08版本保持一致。
