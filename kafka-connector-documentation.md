@@ -4,6 +4,12 @@
 >
 > 基于Apache Flink 1.3-SNAPSHOT
 
+[TOC]
+
+## overview
+
+针对不同的kafka客户端版本，Flink connector也有与之对应的三个版本，分别适配Kafka 0.8.2.2、0.9.0.1和0.10.0.1版本。
+
 ## 0.8.x version
 
 #### architecture
@@ -185,7 +191,7 @@ FlinkKafkaProducer08(String topicId, KeyedSerializationSchema<IN> serializationS
 
 由图可见，10版本的consumer和fetcher只是对09版本的一层接口适配，09版本的fetcher在实现上也跟08版本有差异，fetcher主线程`Kafka09Fetcher`创建接收线程`KafkaConsumerThread`，两者持有`Handover`这个中间类的相同实例，接收线程调用kafka client的`poll`接口从Kafka服务器接收数据，传递给`Handover`后由fetcher线程从`Handover`拿到数据后，调用`AbstractFetcher`的`emitRecord`方法传递数据给`StreamSource`算子。
 
-10版本的producer是function和operator的混合体，可以使用原有的08版本的接口，通过`DataStream.addSink`添加，也可以调用`FlinkKafkaProducer010.writeToKafkaWithTimestamps()`方法，支持将Kafka事件携带的Event Time写入Kafka（以DataStream API方式创建的producer，只实现了`invoke(IN value) `接口，在该框架下无法获取事件类，而通过后者方法创建的producer，重写`StreamSink`的`processElement(StreamRecord<IN> element) `方法，可以获取`StreamRecord`，从而获取事件携带的时间戳，详见producer application sample和API描述中不同的使用方式举例说明）。在数据处理流程上，跟08版本保持一致。
+10版本的producer是function和operator的混合体，可以使用08版本的API调用方式，通过`DataStream.addSink`添加，也可以调用`FlinkKafkaProducer010.writeToKafkaWithTimestamps()`方法，支持将Kafka事件携带的Event Time写入Kafka（以DataStream API方式创建的producer，只实现了`invoke(IN value)`接口，在该框架下无法获取事件类，而通过后者方法创建的producer，重写`StreamSink`的`processElement(StreamRecord element)`方法，可以获取`StreamRecord`，从而获取事件携带的时间戳，详见producer application sample和API描述中不同的使用方式举例说明）。在数据处理流程上，跟08版本保持一致。
 
 #### consumer application sample
 
@@ -242,30 +248,41 @@ FlinkKafkaConsumer010(List<String> topics, DeserializationSchema<T> deserializer
 FlinkKafkaConsumer010(List<String> topics, KeyedDeserializationSchema<T> deserializer, Properties props)
 ```
 
-接口说明：参考08版本接口说明。
+接口说明：参考[08版本接口说明](#consumer-related-api)。
 
-参数说明：props参数与08版本的有所不同，以下说明，其他参数含义相同，参考08版本参数说明。
+参数说明：props参数与08版本的有所不同，以下具体列举说明，其他参数含义相同，参考08版本参数说明。
 
 * consumer和producer共有配置
 
-  | 配置项  | 含义   |
-  | ---- | ---- |
-  |      |      |
-  |      |      |
+  | 配置项                      | 含义                                       |
+  | ------------------------ | ---------------------------------------- |
+  | bootstrap.servers        | Kafka集群ip/port列表，以"host1:port1,host2:port2,..."的形式，无需将整个kafka集群列全 |
+  | metadata.max.age.ms      | 强制刷新元数据的周期时间，无论是否有新的broker或者partition    |
+  | send.buffer.bytes        | 发送数据时TCP发送缓冲区(SO_SNDBUF)大小               |
+  | receive.buffer.bytes     | 接收数据时TCP接收缓冲区(SO_RCVBUF)大小               |
+  | client.id                | 向Kafka服务器发送请求时的客户端标识，便于在服务端日志中区分         |
+  | reconnect.backoff.ms     | 重连服务器的时间间隔，用于防止频繁重连                      |
+  | retry.backoff.ms         | 向topic partition发送请求返回失败后的等待重试的时间，用于防止频繁请求 |
+  | metrics.sample.window.ms | metrics中的sample清理周期，当窗口周期到来，清除计数结果并重新开始计数 |
+  | metrics.num.samples      | metrics包含的sample数量                       |
+  | metric.reporters         | metrics reporter类列表，需要实现`MetricReporter`接口 |
+  | security.protocol        | 安全相关，与broker通信时使用的协议，默认为PLAINTEXT，可选SSL和SASL_SSL，具体配置在另外文档中描述 |
+  | connections.max.idle.ms  | 连接的空闲等待时间，到达后连接关闭                        |
+  | request.timeout.ms       | Kafka客户端发送请求后等待服务端响应的超时时间                |
 
-  ​	  
+* consumer配置
 
-| 配置项名                  | 含义                                       | 示例   |
-| --------------------- | ---------------------------------------- | ---- |
-| group.id              | 参见08版本                                   |      |
-| max.poll.records      | 单次`poll`调用返回的最大记录数                       |      |
-| session.timeout.ms    | 参见08版本，取值范围在group.min.session.timeout.ms 和group.max.session.timeout.ms之间 |      |
-| heartbeat.interval.ms | 心跳间隔，向Kafka coordinator发送的心跳消息用于检测consumer的会话是否处于active状态，以及在consumer加入或者离开consumer group时及时出发rebalancing机制，应当小于session.timeout.ms的值，大于其1/3。 |      |
-|                       |                                          |      |
-|                       |                                          |      |
-|                       |                                          |      |
-|                       |                                          |      |
-|                       |                                          |      |
+  | 配置项名                  | 含义                                       |
+  | --------------------- | ---------------------------------------- |
+  | group.id              | 参见08版本                                   |
+  | max.poll.records      | 单次`poll`调用返回的最大记录数                       |
+  | session.timeout.ms    | 参见08版本，取值范围在group.min.session.timeout.ms 和group.max.session.timeout.ms之间 |
+  | heartbeat.interval.ms | 心跳间隔，向Kafka coordinator发送的心跳消息用于检测consumer的会话是否处于active状态，以及在consumer加入或者离开consumer group时及时触发re-balance机制，应当小于session.timeout.ms的值，大于其1/3。 |
+  |                       |                                          |
+  |                       |                                          |
+  |                       |                                          |
+  |                       |                                          |
+  |                       |                                          |
 
 ####  producer application sample
 
@@ -336,7 +353,7 @@ FlinkKafkaProducer010(String topicId, KeyedSerializationSchema<T> serializationS
 FlinkKafkaProducer010(String topicId, KeyedSerializationSchema<T> serializationSchema, Properties producerConfig, KafkaPartitioner<T> customPartitioner)
 ```
 
-接口说明：参见08版本。
+接口说明：参见[08版本](#producer-related-api)。
 
 * StreamSink 用法接口
 
@@ -345,4 +362,18 @@ FlinkKafkaProducer010Configuration<T> writeToKafkaWithTimestamps(DataStream<T> i
 FlinkKafkaProducer010Configuration<T> writeToKafkaWithTimestamps(DataStream<T> inStream, String topicId, SerializationSchema<T> serializationSchema, Properties producerConfig)
 FlinkKafkaProducer010Configuration<T> writeToKafkaWithTimestamps(DataStream<T> inStream, String topicId, KeyedSerializationSchema<T> serializationSchema, Properties producerConfig, KafkaPartitioner<T> customPartitioner)
 ```
+
+接口说明：对应DataStream API的另一种用法，支持将事件携带的时间写入Kafka，参数含义与DataStream用法相同，接口用法参见[sample](#producer-application-sample-1)。producer配置项参数`producerConfig`包含的所有配置项详见下表（其中与consumer重叠部分的配置项参见[consumer related API章节](#consumer-related-api-1)，不在下面列举）：
+
+| 配置项                       | 含义                                       |
+| ------------------------- | ---------------------------------------- |
+| metadata.fetch.timeout.ms | 第一次往topic发送数据前，我们必须获取topic相关的元数据以便得知topic相关的服务器信息和partition信息，该配置项表示获取的超时时间 |
+|                           |                                          |
+|                           |                                          |
+|                           |                                          |
+|                           |                                          |
+|                           |                                          |
+|                           |                                          |
+
+
 
