@@ -103,7 +103,7 @@ public class ReadFromKafka {
 |    auto.commit.interval.ms    |                    见上                    |      --auto.commit.interval.ms 1000      |
 | partition.assignment.strategy | 分配策略，用于指定线程消费那些分区的消息，默认采用range策略（按照阶段平均分配）。比如分区有10个、线程数有3个，则线程 1消费0,1,2,3，线程2消费4,5,6,线程3消费7,8,9。另外一种是roundrobin(循环分配策略)，官方文档中写有使用该策略有两个前提条件的，所以一般不要去设定。 | --partition.assignment.strategy roundrobin |
 |       auto.offset.reset       | 指定从哪个offset开始消费消息，默认为largest，即从最新的消息开始消费，consumer只能得到其启动后producer产生的消息；也可配成smallest，则从最早的消息开始 |       --auto.offset.reset smallest       |
-|        fetch.min.bytes        | server发送到consumer的最小数据，如果不满足这个数值则会等待知道满足指定大小。 |           --fetch.min.bytes 1            |
+|        fetch.min.bytes        | server发送到consumer的最小数据，如果不满足这个数值则会等待知道满足指定大小 |           --fetch.min.bytes 1            |
 |       fetch.max.wait.ms       | 当Kafka服务器收集到fetch.min.bytes大小的数据之前，无法及时响应fetch请求的超时时间 |         --fetch.max.wait.ms 6000         |
 |   metadata.fetch.timeout.ms   | 获取topic相关元数据超时时间，超时情况下consumer报`TimeoutException`异常 |     --metadata.fetch.timeout.ms 6000     |
 |      total.memory.bytes       | consumer最大缓存大小，当consumer订阅了多个topic时，所有跟partition的连接共享该缓存大小 |        --total.memory.bytes 8192         |
@@ -272,17 +272,24 @@ FlinkKafkaConsumer010(List<String> topics, KeyedDeserializationSchema<T> deseria
 
 * consumer配置
 
-  | 配置项名                  | 含义                                       |
-  | --------------------- | ---------------------------------------- |
-  | group.id              | 参见08版本                                   |
-  | max.poll.records      | 单次`poll`调用返回的最大记录数                       |
-  | session.timeout.ms    | 参见08版本，取值范围在group.min.session.timeout.ms 和group.max.session.timeout.ms之间 |
-  | heartbeat.interval.ms | 心跳间隔，向Kafka coordinator发送的心跳消息用于检测consumer的会话是否处于active状态，以及在consumer加入或者离开consumer group时及时触发re-balance机制，应当小于session.timeout.ms的值，大于其1/3。 |
-  |                       |                                          |
-  |                       |                                          |
-  |                       |                                          |
-  |                       |                                          |
-  |                       |                                          |
+  | 配置项名                          | 含义                                       |
+  | ----------------------------- | ---------------------------------------- |
+  | group.id                      | 用于标识consumer属于的consumer group，           |
+  | max.poll.records              | 单次`poll`调用返回的最大记录数                       |
+  | session.timeout.ms            | 会话超时时间，如果kafka coordinator在超时时间内没有收到来自消费者的心跳请求，将rebalance整个group，并认为consumer已经dead，取值范围在group.min.session.timeout.ms 和group.max.session.timeout.ms之间 |
+  | heartbeat.interval.ms         | 心跳间隔，向Kafka coordinator发送的心跳消息用于检测consumer的会话是否处于active状态，以及在consumer加入或者离开consumer group时及时触发rebalance机制，应当小于session.timeout.ms的值，大于其1/3。 |
+  | enable.auto.commit            | 使能周期性地告知kafka当前已处理的消息offset，周期为auto.commit.interval.ms，取值为true或false |
+  | auto.commit.interval.ms       | 见enable.auto.commit                      |
+  | partition.assignment.strategy | 分配策略，用于指定线程消费那些分区的消息，默认采用range策略（按照阶段平均分配）。比如分区有10个、线程数有3个，则线程 1消费0,1,2,3，线程2消费4,5,6,线程3消费7,8,9。另外一种是roundrobin(循环分配策略)，官方文档中写有使用该策略有两个前提条件的，所以一般不要去设定。 |
+  | auto.offset.reset             | 指定从哪个offset开始消费消息，默认为largest，即从最新的消息开始消费，consumer只能得到其启动后producer产生的消息；也可配成smallest，则从最早的消息开始 |
+  | fetch.min.bytes               | server发送到consumer的最小数据，如果不满足这个数值则会等待知道满足指定大小 |
+  | fetch.max.wait.ms             | 当Kafka服务器收集到fetch.min.bytes大小的数据之前，无法及时响应fetch请求的超时时间 |
+  | max.partition.fetch.bytes     | Kafka服务器每个partition返回的最大数据大小，应当大于服务器允许的最大消息大小，默认大小为1 * 1024 * 1024 |
+  | check.crcs                    | 是否自动使用CRC32算法计算消息校验和，会在一定程度上影响性能         |
+  | key.deserializer              | key/value格式消息中key的反序列化类名，需要实现`Deserializer`接口 |
+  | value.deserializer            | key/value格式消息中value的反序列化类名，需要实现`Deserializer`接口 |
+  | interceptor.classes           | 用于消息过滤拦截的类名列表，需要实现`ConsumerInterceptor`接口 |
+  | exclude.internal.topics       | 决定内部topic（比如offset）暴露给consumer，如果设置为true（默认），需要通过订阅才能接收到内部topic的消息记录 |
 
 ####  producer application sample
 
@@ -368,8 +375,8 @@ FlinkKafkaProducer010Configuration<T> writeToKafkaWithTimestamps(DataStream<T> i
 | 配置项                       | 含义                                       |
 | ------------------------- | ---------------------------------------- |
 | metadata.fetch.timeout.ms | 第一次往topic发送数据前，我们必须获取topic相关的元数据以便得知topic相关的服务器信息和partition信息，该配置项表示获取的超时时间 |
-|                           |                                          |
-|                           |                                          |
+| batch.size                | 性能相关配置项，当一定数量的消息发往同一个partition时，producer会尝试打包后一起发送，盖配置项表示打包消息的数量，当设置成0将使batch功能失效，设置过小会影响吞吐量，设置过大则会浪费内存 |
+| acks                      |                                          |
 |                           |                                          |
 |                           |                                          |
 |                           |                                          |
