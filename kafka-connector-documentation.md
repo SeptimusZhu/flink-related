@@ -8,7 +8,26 @@
 
 ## overview
 
+Kafka是一个高性能、跨语言分布式发布、订阅消息队列系统。
+
 针对不同的kafka客户端版本，Flink connector也有与之对应的三个版本，分别适配Kafka 0.8.2.2、0.9.0.1和0.10.0.1版本。
+
+* 专业术语
+
+  - 消息（Message）：在生产者、服务端和消费者之间传输的数据
+  - 消息代理/消息服务器（Broker）：用来存储消息队列的服务器
+  - 消息生产者（Producer）：负责发布消息到Broker的实体
+  - 消息消费者（Consumer）：负责消息的消费，每个Consumer属于一个特定的Consumer Group，同一个Topic的一条消息只能被同一个Consumer Group内的一个Consumer消费，但多个Consumer Group可以同时消费这条消息
+  - 消息的主题（Topic）：由用户定义并在Broker上配置，Producer发送消息到某个Topic下，Consumer从某个Topic下消费消息。不同的Topic在物理上是分开存储的，但是逻辑上的一个Topic可能存储在一个或者多个Broker上，Topic对生产者和消费者透明，生产者和消费者无需关心数据存储的位置
+  - 主题的分区（Partition）：每个Topic包含一个或多个Partition，用户在创建Topic时可以指定分区数，用于数据的负载均衡
+  - 消费者分组（Consumer Group）：由多个消费者组成，共同消费一个Topic下的消息，每个消费者消费其中一部分消息
+  - 偏移量（Offset）：分区中的消息都有一个递增的id，称为Offset，惟一标识了分区中的消息序号
+
+* Push和Pull机制
+
+  Kafka由Producer向Broker push消息，并由Consumer从Broker pull消息。
+
+  Consumer的pull模式使之可以控制消息到来的速率，避免push模式可能导致的网络拥塞以及Consumer来不及响应服务。
 
 ## 0.8.x version
 
@@ -372,15 +391,24 @@ FlinkKafkaProducer010Configuration<T> writeToKafkaWithTimestamps(DataStream<T> i
 
 接口说明：对应DataStream API的另一种用法，支持将事件携带的时间写入Kafka，参数含义与DataStream用法相同，接口用法参见[sample](#producer-application-sample-1)。producer配置项参数`producerConfig`包含的所有配置项详见下表（其中与consumer重叠部分的配置项参见[consumer related API章节](#consumer-related-api-1)，不在下面列举）：
 
-| 配置项                       | 含义                                       |
-| ------------------------- | ---------------------------------------- |
-| metadata.fetch.timeout.ms | 第一次往topic发送数据前，我们必须获取topic相关的元数据以便得知topic相关的服务器信息和partition信息，该配置项表示获取的超时时间 |
-| batch.size                | 性能相关配置项，当一定数量的消息发往同一个partition时，producer会尝试打包后一起发送，盖配置项表示打包消息的数量，当设置成0将使batch功能失效，设置过小会影响吞吐量，设置过大则会浪费内存 |
-| acks                      |                                          |
-|                           |                                          |
-|                           |                                          |
-|                           |                                          |
-|                           |                                          |
+| 配置项                                   | 含义                                       | 缺省值      |
+| ------------------------------------- | ---------------------------------------- | -------- |
+| metadata.fetch.timeout.ms             | 第一次往topic发送数据前，我们必须获取topic相关的元数据以便得知topic相关的服务器信息和partition信息，该配置项表示获取的超时时间 | 60000    |
+| batch.size                            | 性能相关配置项，当一定数量的消息发往同一个partition时，producer会尝试打包后一起发送，盖配置项表示打包消息的数量，当设置成0将使batch功能失效，设置过小会影响吞吐量，设置过大则会浪费内存 | 16384    |
+| acks                                  | producer需要server接收到数据之后发出确认接收的信号，此项配置就是指procuder需要多少个这样的确认信号。此配置实际上代表了数据备份的可用性。以下设置为常用选项：（1）acks=0： 设置为0表示producer不需要等待任何确认收到的信息。副本将立即加到socket  buffer并认为已经发送。没有任何保障可以保证此种情况下server已经成功接收数据，同时retries配置不会发生作用（因为客户端不知道是否失败）返回的offset会总是设置为-1；（2）acks=1： 这意味着至少要等待leader已经成功将数据写入本地log，但是并没有等待所有follower是否成功写入。这种情况下，如果follower没有成功备份数据，而此时leader又挂掉，则消息会丢失。（3）acks=all： 这意味着leader需要等待所有备份都成功写入日志，这种策略会保证只要有一个备份存活就不会丢失数据。这是最强的保证。（4）其他的设置，例如acks=2也是可以的，这将需要给定的acks数量，但是这种策略一般很少用。 | 1        |
+| timeout.ms                            | 此配置选项控制server等待来自followers的确认的最大时间。如果确认的请求数目在此时间内没有实现，则会返回一个错误。这个超时限制是以server端度量的，没有包含请求的网络延迟 | 30000    |
+| linger.ms                             | producer组将会汇总任何在请求与发送之间到达的消息记录一个单独批量的请求。通常来说，这只有在记录产生速度大于发送速度的时候才能发生。然而，在某些条件下，客户端将希望降低请求的数量，甚至降低到中等负载一下。这项设置将通过增加小的延迟来完成--即，不是立即发送一条记录，producer将会等待给定的延迟时间以允许其他消息记录发送，这些消息记录可以批量处理。这可以认为是TCP种Nagle的算法类似。这项设置设定了批量处理的更高的延迟边界：一旦我们获得某个partition的batch.size，他将会立即发送而不顾这项设置，然而如果我们获得消息字节数比这项设置要小的多，我们需要“linger”特定的时间以获取更多的消息。 这个设置默认为0，即没有延迟。设定linger.ms=5，例如，将会减少请求数目，但是同时会增加5ms的延迟。 | 0        |
+| max.request.size                      | 请求的最大字节数。这也是对最大记录尺寸的有效覆盖。注意：server具有自己对消息记录尺寸的覆盖，这些尺寸和这个设置不同。此项设置将会限制producer每次批量发送请求的数目，以防发出巨量的请求。 | 1028576  |
+| max.block.ms                          |                                          |          |
+| block.on.buffer.full                  | 当我们内存缓存用尽时，必须停止接收新消息记录或者抛出错误。默认情况下，这个设置为真，然而某些阻塞可能不值得期待，因此立即抛出错误更好。设置为false则会这样：producer会抛出一个异常错误：BufferExhaustedException， 如果记录已经发送同时缓存已满 | true     |
+| buffer.memory                         | producer可以用来缓存数据的内存大小。如果数据产生速度大于向broker发送的速度，producer会阻塞或者抛出异常，以“block.on.buffer.full”来表明。 这项设置将和producer能够使用的总内存相关，但并不是一个硬性的限制，因为不是producer使用的所有内存都是用于缓存。一些额外的内存会用于压缩（如果引入压缩机制），同样还有一些用于维护请求。 | 33554432 |
+| compression.type                      | producer用于压缩数据的压缩类型。默认是无压缩。正确的选项值是none、gzip、snappy。压缩最好用于批量处理，批量处理消息越多，压缩性能越好。 | none     |
+| max.in.flight.requests.per.connection | client中每个发送连接最大未确认消息数                    |          |
+| retries                               | 设置大于0的值将使客户端重新发送任何数据，一旦这些数据发送失败。注意，这些重试与客户端接收到发送错误时的重试没有什么不同。允许重试将潜在的改变数据的顺序，如果这两个消息记录都是发送到同一个partition，则第一个消息失败第二个发送成功，则第二条消息会比第一条消息出现要早。 | 0        |
+| key.serializer                        | key/value格式消息中key的序列化类名，需要实现`Serializer`接口 |          |
+| value.serializer                      | key/value格式消息中value的序列化类名，需要实现`Serializer`接口 |          |
+| partitioner.class                     | 用户自定义的分组派发策略类名，需要实现Partitioner接口         |          |
+| interceptor.classes                   | 用户自定义的消息过滤拦截的类名列表，需要实现`ConsumerInterceptor`接口 |          |
 
 
 
