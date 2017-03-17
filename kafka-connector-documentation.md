@@ -33,7 +33,7 @@ Kafka是一个高性能、跨语言分布式发布、订阅消息队列系统。
 
 #### 08架构与主流程
 
-  ![](http://code.huawei.com/real-time-team/roadmap/raw/1a6e47e10f52800fa94b62a070e77ab1611c6a53/pictures/08kafka_connector.PNG)
+  ![](pictures/08kafka_connector.PNG)
 
 ​	Kafka消费者类`FlinkKafkaConsumer08`和Kafka生产者类`FlinkKafkaProducer08`与用户在DataStream API中自定义的算子函数类似，都实现了`Function`接口。这两个类基本上是对老版本的接口做封装，多数方法在对应的父类Base类中实现，其中consumer是source端，而producer是sink端。
 
@@ -204,7 +204,7 @@ FlinkKafkaProducer08(String topicId, KeyedSerializationSchema<IN> serializationS
 
 #### 09架构与主流程
 
-![](http://code.huawei.com/real-time-team/roadmap/raw/cece7b7126960c614061725dd270968858e22b20/pictures/09kafka_connector.PNG)
+![](pictures/09kafka_connector.PNG)
 
 主流程说明参见[010版本](#010架构与主流程)
 
@@ -339,7 +339,7 @@ FlinkKafkaProducer09(String topicId, KeyedSerializationSchema<IN> serializationS
 
 #### 010架构与主流程
 
-![](http://code.huawei.com/real-time-team/roadmap/raw/1a6e47e10f52800fa94b62a070e77ab1611c6a53/pictures/10kafka_connector.PNG)
+![](pictures/10kafka_connector.PNG)
 
 由图可见，10版本的consumer和fetcher只是对09版本的一层接口适配，09版本的fetcher在实现上也跟08版本有差异，fetcher主线程`Kafka09Fetcher`创建接收线程`KafkaConsumerThread`，两者持有`Handover`这个中间类的相同实例，接收线程调用kafka client的`poll`接口从Kafka服务器接收数据，传递给`Handover`后由fetcher线程从`Handover`拿到数据后，调用`AbstractFetcher`的`emitRecord`方法传递数据给`StreamSource`算子。
 
