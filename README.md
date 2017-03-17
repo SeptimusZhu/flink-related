@@ -8,3 +8,4 @@
 * http://blog.csdn.net/fenglibing/article/details/6411940
 * http://orchome.com/170
 * http://kafka.apache.org/documentation.html#security_sasl
+* https://segmentfault.com/a/1190000000458953
