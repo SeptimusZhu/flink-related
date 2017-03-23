@@ -8,3 +8,4 @@
 * http://kafka.apache.org/documentation.html#security_sasl
 * https://segmentfault.com/a/1190000000458953
 * http://www.tuicool.com/articles/3y6z2ay
+* https://segmentfault.com/a/1190000002398039
