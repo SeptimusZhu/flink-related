@@ -10,3 +10,4 @@
 * http://www.tuicool.com/articles/3y6z2ay
 * https://segmentfault.com/a/1190000002398039
 * https://codetrips.com/2015/06/28/581/
+* http://mesos.berkeley.edu/mesos_tech_report.pdf
