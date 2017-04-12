@@ -40,4 +40,8 @@ rpm -ivh marathon-1.4.0*.rpm
 
 打开Marathon WebUI（默认端口8080），点击Create Application，可以选在使用JSON模式描述任务信息，或者使用UI界面，本例中使用JSON方式，在cmd中写入运行的命令，点击右下角的Create Application提交。
 
-![](pictu)
+![](pictures/marathon.PNG)
+
+#### 5.部署Flink
+
+只需要将cmd的内容修改为`$FLINK_HOME/bin/mesos-appmaster.sh-Dmesos.master=node:5050 -Dmesos.initial-tasks=1`即可
