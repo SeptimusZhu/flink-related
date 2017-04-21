@@ -42,6 +42,11 @@ rpm -ivh marathon-1.4.0*.rpm
 
 ![](pictures/marathon.PNG)
 
+使用curl方式提交命令格式如下：
+
+```shell
+curl -X POST http://10.120.177.85:8080/v2/apps -d @basic-0.json -H "Content-type: application/json"
+```
 #### 5.部署Flink
 
 只需要将cmd的内容修改为`$FLINK_HOME/bin/mesos-appmaster.sh -Dmesos.master=$MESOS_MASTER_IP:5050`即可在Mesos中部署Flink集群。
