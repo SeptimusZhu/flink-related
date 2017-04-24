@@ -113,7 +113,7 @@ marathon webUI address: 10.120.181.94:8080
 
 #### 部署Flink
 
-编写json格式的marathon应用文件描述文件flink-example.json:
+编写json格式的marathon应用描述文件flink-example.json:
 
 ```json
 {
