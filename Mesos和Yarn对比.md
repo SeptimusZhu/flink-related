@@ -32,6 +32,7 @@ YARN在Apache Hadoop 2.7.3版本中，只支持基于cgroup cpu的隔离，而�
 
 总体来说，YARN在资源隔离方面还有很多需要改进的地方，比如支持更细粒度和更多类型的资源隔离。细粒度的资源隔离方式更有利于流服务的最大化资源利用率和计费诉求，以及未来可能存在的图计算对GPU资源的隔离需求。
 
+
 #### 2.长服务支持
 
 流作业经常以long-running service的状态存在，这会引入以下问题：
@@ -42,6 +43,11 @@ YARN在Apache Hadoop 2.7.3版本中，只支持基于cgroup cpu的隔离，而�
 * 服务发现
 * 资源伸缩
 
+从Hadoop2.2开始对，hortonworks官方宣称支持长服务（[链接](https://hortonworks.com/blog/support-long-running-services-hadoop-yarn-clusters/)），对应的[YARN-896](https://issues.apache.org/jira/browse/YARN-896)跟踪的ISSUE列表中可见支持程度有限，对长服务的支持更多地依赖于YARN框架，包括Apache Slider（孵化中）和Apache Twill（Apache顶级项目），前者提供了服务高可用和资源伸缩应用扩展，后者提供了日志实时收集和服务发现等特性。YARN内核内置了对服务注册的支持。目前，Flink没有应用在YARN的任何框架上，在YARN上无法实现应用扩展。
+
+Mesos框架Marathon（Apache顶级项目）天然支持长服务。服务高可用方面，提供应用的挂死重启，结合Zookeeper，Marathon本身也提供HA特性；在资源伸缩方面，Marathon支持动态扩展Flink应用实例（横向扩展），而在纵向扩展方面则有所不足，动态修改应用资源将导致应用重启；服务发现依赖Mesos-DNS实现。
+
+YARN和Mesos在日志滚动收集方面都依赖于上层框架，目前主流的调度器均采用资源预留的机制，调度资源竞争与饿死问题多多少少存在于所有资源管理系统。
 
 
 #### 3.社区生态
@@ -68,6 +74,7 @@ The Flink community is actively working on improvements beyond the 1.2 release, 
 
 * https://www.oreilly.com/ideas/a-tale-of-two-clusters-mesos-and-yarn
 * https://hortonworks.com/apache/yarn/
+* https://hortonworks.com/blog/support-long-running-services-hadoop-yarn-clusters/
 * https://biaobean.gitbooks.io/dcos/content/mesos_hadoop.html
 * https://github.com/mesos/hadoop
 * https://github.com/mesos/spark
