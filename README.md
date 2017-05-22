@@ -12,3 +12,4 @@
 * https://codetrips.com/2015/06/28/581/
 * http://mesos.berkeley.edu/mesos_tech_report.pdf
 * http://www.dockerinfo.net/1276.html
+* https://github.com/euskadi31/stout-cpp#try-result-and-error
